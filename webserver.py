@@ -36,7 +36,7 @@ def  category_show():
     items = session.query(Category).all()
     return render_template('home.html',items=items)
 
-#Category dashboard
+#Login page
 @app.route('/login')
 def showLogin():
     state = ''.join(random.choice(string.ascii_uppercase + string.digits)
@@ -44,6 +44,7 @@ def showLogin():
     login_session['state'] = state
     return render_template("login.html", STATE=state)
 
+#Facebook Connect
 @app.route('/fbconnect', methods=['POST'])
 def fbconnect():
     if request.args.get('state') != login_session['state']:
@@ -183,10 +184,12 @@ def gconnect():
         response.headers['Content-Type'] = 'application/json'
         return response
 
+
     # Store the access token in the session for later use.
     login_session['access_token'] = credentials.access_token
     login_session['gplus_id'] = gplus_id
     login_session['provider'] = 'google'
+
     # Get user info
     userinfo_url = "https://www.googleapis.com/oauth2/v1/userinfo"
     params = {'access_token': credentials.access_token, 'alt': 'json'}
@@ -196,6 +199,10 @@ def gconnect():
     login_session['username'] = data['name']
     login_session['picture'] = data['picture']
     login_session['email'] = data['email']
+
+    user_id = getUserID(login_session['email'])
+    if not user_id:
+        user_id = createUser(login_session)
 
     output = ''
     output += '<h1>Welcome, '
@@ -254,11 +261,8 @@ def categories_new():
     if 'username' not in login_session:
         return redirect('/login')
     if request.method == 'POST':
-        if login_session['provider'] == 'facebook':
-            UserTest = login_session['user_id']
-        else:
-            UserTest = login_session['gplus_id']
-        newItem = Category(name=request.form['name'],user_id = UserTest)
+        UserTest = session.query(User).filter_by(email=login_session['email']).one()
+        newItem = Category(name=request.form['name'],user_id = UserTest.id)
         session.add(newItem)
         session.commit()
         return redirect(url_for('categories_dashboard'))
@@ -272,11 +276,8 @@ def categories_edit(category_id):
     if 'username' not in login_session:
         return redirect('/login')
     editedItem = session.query(Category).filter_by(id=category_id).one()
-    if login_session['provider'] == 'facebook':
-        UserTest = login_session['user_id']
-    else:
-        UserTest = login_session['gplus_id']
-    if  UserTest != editedItem.user_id:
+    UserTest = session.query(User).filter_by(id=editedItem.user_id).one()
+    if  UserTest.email != login_session['email']:
         return "<script>function myFunction() {alert('You are not authorized to edit this category. Please create your own category.');history.go(-1);}</script><body onload='myFunction()'>"
     if request.method == 'POST':
         if request.form['name']:
@@ -295,11 +296,8 @@ def categories_delete(category_id):
         return redirect('/login')
     itemToDelete = session.query(Category).filter_by(id=category_id).one()
     Productstodelete = session.query(Product).filter_by(category_id=itemToDelete.id)
-    if login_session['provider'] == 'facebook':
-        UserTest = login_session['user_id']
-    else:
-        UserTest = login_session['gplus_id']
-    if  UserTest != itemToDelete.user_id:
+    UserTest = session.query(User).filter_by(id=itemToDelete.user_id).one()
+    if  UserTest.email != login_session['email']:
         return "<script>function myFunction() {alert('You are not authorized to delete this category.');history.go(-1);}</script><body onload='myFunction()'>"
     if request.method == 'POST':
         for i in Productstodelete:
@@ -337,11 +335,8 @@ def productItem_delete(category_id,productItem_id):
     if 'username' not in login_session:
         return redirect('/login')
     itemToDelete = session.query(Product).filter_by(id=productItem_id).one()
-    if login_session['provider'] == 'facebook':
-        UserTest = login_session['user_id']
-    else:
-        UserTest = login_session['gplus_id']
-    if  UserTest != itemToDelete.user_id:
+    UserTest = session.query(User).filter_by(id=itemToDelete.user_id).one()
+    if  UserTest.email != login_session['email']:
         return "<script>function myFunction() {alert('You are not authorized to delete the products in this category.');history.go(-1);}</script><body onload='myFunction()'>"
     if request.method == 'POST':
         session.delete(itemToDelete)
@@ -356,15 +351,12 @@ def productItem_add(category_id):
     if 'username' not in login_session:
         return redirect('/login')
     category = session.query(Category).filter_by(id=category_id).one()
-    if login_session['provider'] == 'facebook':
-        UserTest = login_session['user_id']
-    else:
-        UserTest = login_session['gplus_id']
-    if  UserTest != category.user_id:
+    UserTest = session.query(User).filter_by(id=category.user_id).one()
+    if  UserTest.email != login_session['email']:
         return "<script>function myFunction() {alert('You are not authorized to add products to this category. Please create your own category in order to add items.');history.go(-1);}</script><body onload='myFunction()'>"
     if request.method == 'POST':
         newItem = Product(name=request.form['name'], description=request.form[
-                           'description'], price=request.form['price'], brand=request.form['brand'], category_id=category_id,user_id = UserTest)
+                           'description'], price=request.form['price'], brand=request.form['brand'], category_id=category_id,user_id = UserTest.id)
         session.add(newItem)
         session.commit()
         return redirect(url_for('categoryProducts_dashboard', category_id=category_id))
@@ -378,11 +370,8 @@ def productItem_edit(category_id, product_id):
     if 'username' not in login_session:
         return redirect('/login')
     editedItem = session.query(Product).filter_by(id=product_id).one()
-    if login_session['provider'] == 'facebook':
-        UserTest = login_session['user_id']
-    else:
-        UserTest = login_session['gplus_id']
-    if UserTest != editedItem.user_id:
+    UserTest = session.query(User).filter_by(id=editedItem.user_id).one()
+    if  UserTest.email != login_session['email']:
         return "<script>function myFunction() {alert('You are not authorized to edit prodcut items to this category. Please create your own category in order to edit items.');history.go(-1);}</script><body onload='myFunction()'>"
     if request.method == 'POST':
         if request.form['name']:
