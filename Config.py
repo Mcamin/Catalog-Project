@@ -58,7 +58,7 @@ class Product(Base):
             'description': self.description,
             'id': self.id,
             'price': self.price,
-            'brand': self.course,
+            'brand': self.brand,
         }
 
 
