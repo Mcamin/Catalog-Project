@@ -18,7 +18,7 @@
 ##### 5. clone this project inside the vagrant folder and open the project directory
     cd /Catalog-Project-master
 
-##### 6. open the project directory and launch the Webserver.py
+##### 6. launch the Webserver.py
       python webserver.py
 
 
