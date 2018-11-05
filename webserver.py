@@ -4,7 +4,7 @@
 
 from flask import Flask, render_template, request, redirect
 from sqlalchemy import create_engine, asc
-from flask import  url_for, jsonify, flash
+from flask import url_for, jsonify, flash
 from sqlalchemy.orm import sessionmaker, scoped_session
 from Config import Base, Product, Category, User
 from flask import session as login_session
@@ -68,8 +68,10 @@ def fbconnect():
         'web']['app_id']
     app_secret = json.loads(
         open('fb_client_secrets.json', 'r').read())['web']['app_secret']
-    url = """https://graph.facebook.com/oauth/access_token?grant_type=fb_exchange_token&client_id=%s&client_secret=%s&fb_exchange_token=%s""" % (
-        app_id, app_secret, access_token)
+    url = "https://graph.facebook.com/oauth/access_token?grant_type=" \
+          "fb_exchange_token&client_id=%s&client_secret=%s" \
+          "&fb_exchange_token=%s"\
+          % (app_id, app_secret, access_token)
     h = httplib2.Http()
     result = h.request(url, 'GET')[1]
 
@@ -78,15 +80,16 @@ def fbconnect():
     '''
         Due to the formatting for the result from the server token exchange
         we have to split the token first on commas and select the first index
-        which gives us the key : value for the server access token then we split
-        it on colons to pull out the actual token value and replace the
-        remaining quotes with nothing so that it can be used directly in
+        which gives us the key : value for the server access token then
+        we split it on colons to pull out the actual token value and replace
+        the remaining quotes with nothing so that it can be used directly in
         the graph api calls
     '''
     print(result)
     token = result.split(',')[0].split(':')[1].replace('"', '')
 
-    url = """https://graph.facebook.com/v2.8/me?access_token=%s&fields=name,id,email""" % token
+    url = "https://graph.facebook.com/v2.8/me?" \
+          "access_token=%s&fields=name,id,email" % token
     h = httplib2.Http()
     result = h.request(url, 'GET')[1]
     # print "url sent for API access:%s"% url
@@ -101,7 +104,8 @@ def fbconnect():
     login_session['access_token'] = token
 
     # Get user picture
-    url = """https://graph.facebook.com/v2.8/me/picture?access_token=%s&redirect=0&height=200&width=200""" % token
+    url = "https://graph.facebook.com/v2.8/me/picture?" \
+          "access_token=%s&redirect=0&height=200&width=200" % token
     h = httplib2.Http()
     result = h.request(url, 'GET')[1]
     data = json.loads(result)
@@ -121,7 +125,8 @@ def fbconnect():
     output += '!</h1>'
     output += '<img src="'
     output += login_session['picture']
-    output += ' " style = width: 150px; height: 150px;border-radius: 75px;-webkit-border-radius: 75px;-moz-border-radius: 75px;">'
+    output += ' " style = width: 150px; height: 150px;border-radius: 75px;'\
+              '-webkit-border-radius: 75px;-moz-border-radius: 75px;">'
 
     flash("Now logged in as %s" % login_session['username'])
     return output
@@ -186,15 +191,15 @@ def gconnect():
     if result['issued_to'] != CLIENT_ID:
         response = make_response(
             json.dumps("Token's client ID does not match app's."), 401)
-        print "Token's client ID does not match app's."
+        print("Token's client ID does not match app's.")
         response.headers['Content-Type'] = 'application/json'
         return response
 
     stored_access_token = login_session.get('access_token')
     stored_gplus_id = login_session.get('gplus_id')
     if stored_access_token is not None and gplus_id == stored_gplus_id:
-        response = make_response(json.dumps('Currentuser is already connected.')
-                                 ,200)
+        response = make_response(json.dumps('Currentuser is already '
+                                            'connected.'), 200)
         response.headers['Content-Type'] = 'application/json'
         return response
 
@@ -223,7 +228,8 @@ def gconnect():
     output += '!</h1>'
     output += '<img src="'
     output += login_session['picture']
-    output += ' " style = "width: 150px; height: 150px;border-radius: 75px;-webkit-border-radius: 75px;-moz-border-radius: 75px;"> '
+    output += ' " style = "width: 150px; height: 150px;border-radius: 75px;'\
+              '-webkit-border-radius: 75px;-moz-border-radius: 75px;"> '
     flash("you are now logged in as %s" % login_session['username'])
     print "done!"
     return output
@@ -243,7 +249,8 @@ def gdisconnect():
             'Current user not connected.'), 401)
         response.headers['Content-Type'] = 'application/json'
         return response
-    url = 'https://accounts.google.com/o/oauth2/revoke?token=%s' % login_session['access_token']
+    url = 'https://accounts.google.com/o/oauth2/' \
+          'revoke?token=%s' % login_session['access_token']
     h = httplib2.Http()
     result = h.request(url, 'GET')[0]
     print 'result is '
@@ -302,7 +309,9 @@ def categories_edit(category_id):
     editedItem = session.query(Category).filter_by(id=category_id).one()
     UserTest = session.query(User).filter_by(id=editedItem.user_id).one()
     if UserTest.email != login_session['email']:
-        return "<script>function myFunction() {alert('You are not authorized to edit this category. Please create your own category.');history.go(-1);}</script><body onload='myFunction()'>"
+        return "<script>function myFunction() {alert('You are not authorized "\
+               "to edit this category. Please create your own category.');"\
+               "history.go(-1);}</script><body onload='myFunction()'>"
     if request.method == 'POST':
         if request.form['name']:
             editedItem.name = request.form['name']
@@ -326,7 +335,9 @@ def categories_delete(category_id):
         Product).filter_by(category_id=itemToDelete.id)
     UserTest = session.query(User).filter_by(id=itemToDelete.user_id).one()
     if UserTest.email != login_session['email']:
-        return "<script>function myFunction() {alert('You are not authorized to delete this category.');history.go(-1);}</script><body onload='myFunction()'>"
+        return "<script>function myFunction() {alert('You are not authorized" \
+               " to delete this category.');history.go(-1);}</script>" \
+               "<body onload='myFunction()'>"
     if request.method == 'POST':
         for i in Productstodelete:
             session.delete(i)
@@ -369,7 +380,8 @@ def categoryProducts_dashboard(category_id):
 # Delete Prodcut from Category
 
 
-@app.route('/categories/<int:category_id>/products/<int:productItem_id>/delete',
+@app.route('/categories/<int:category_id>/products/'
+           '<int:productItem_id>/delete',
            methods=['GET', 'POST'])
 def productItem_delete(category_id, productItem_id):
     if 'username' not in login_session:
@@ -377,7 +389,9 @@ def productItem_delete(category_id, productItem_id):
     itemToDelete = session.query(Product).filter_by(id=productItem_id).one()
     UserTest = session.query(User).filter_by(id=itemToDelete.user_id).one()
     if UserTest.email != login_session['email']:
-        return "<script>function myFunction() {alert('You are not authorized to delete the products in this category.');history.go(-1);}</script><body onload='myFunction()'>"
+        return "<script>function myFunction() {alert('You are not authorized" \
+               "to delete the products in this category.');history.go(-1);}" \
+               "</script><body onload='myFunction()'>"
     if request.method == 'POST':
         session.delete(itemToDelete)
         session.commit()
@@ -390,14 +404,19 @@ def productItem_delete(category_id, productItem_id):
 # Add Product to Category
 
 
-@app.route('/categories/<int:category_id>/products/add', methods=['GET', 'POST'])
+@app.route('/categories/<int:category_id>/products/add',
+           methods=['GET', 'POST'])
 def productItem_add(category_id):
     if 'username' not in login_session:
         return redirect('/login')
     category = session.query(Category).filter_by(id=category_id).one()
     UserTest = session.query(User).filter_by(id=category.user_id).one()
     if UserTest.email != login_session['email']:
-        return "<script>function myFunction() {alert('You are not authorized to add products to this category. Please create your own category in order to add items.');history.go(-1);}</script><body onload='myFunction()'>"
+        return "<script>function myFunction() {alert('You are not authorized" \
+               " to add products to this category. " \
+               "Please create your own category " \
+               "in order to add items.');history.go(-1);}</script>"\
+               "<body onload='myFunction()'>"
     if request.method == 'POST':
         newItem = Product(name=request.form['name'], description=request.form[
             'description'], price=request.form['price'],
@@ -422,7 +441,11 @@ def productItem_edit(category_id, product_id):
     editedItem = session.query(Product).filter_by(id=product_id).one()
     UserTest = session.query(User).filter_by(id=editedItem.user_id).one()
     if UserTest.email != login_session['email']:
-        return "<script>function myFunction() {alert('You are not authorized to edit prodcut items to this category. Please create your own category in order to edit items.');history.go(-1);}</script><body onload='myFunction()'>"
+        return "<script>function myFunction() {alert('You are not authorized"\
+               " to edit prodcut items to this category. " \
+               "Please create your own "\
+               "category in order to edit items.');history.go(-1);}"\
+               "</script><body onload='myFunction()'>"
     if request.method == 'POST':
         if request.form['name']:
             editedItem.name = request.form['name']
