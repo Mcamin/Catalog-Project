@@ -386,9 +386,9 @@ def categoryProducts(category_id):
 # Category Prodcuts Dashboard
     """Check if the user is logged in and display all the products within the
       selected category in the dashboard, add a brand Filter by loading the
-      distinct brands in the products table that matched with the category idself.
-      The user is able here to create, modify and delete products within the
-      category"""
+      distinct brands in the products table that matched with the category
+      itself. The user is able here to create, modify and delete products
+      within the category"""
 
 
 @app.route('/categories/<int:category_id>/products')
