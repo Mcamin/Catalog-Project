@@ -21,11 +21,10 @@
 ##### 6. launch the Webserver.py
       python webserver.py
 
+##### 7. In case the database was deleted, a new one can be created using the following command:
+      python config.py
 
 * ###### Open <a target="_blank" href="http://localhost:5000/">Localhost</a>.
-
-
-##### Table Representation
 
 <br/>
     **** User Table *****

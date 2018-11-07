@@ -19,6 +19,7 @@ import requests
 
 app = Flask(__name__)
 
+"""Read the clients_secrets.json file and ger the client id"""
 CLIENT_ID = json.loads(
     open('client_secrets.json', 'r').read())['web']['client_id']
 APPLICATION_NAME = "Catalog Application"
@@ -28,13 +29,15 @@ Base.metadata.bind = engine
 
 session = scoped_session(sessionmaker(bind=engine, expire_on_commit=True))
 
+# Fix Reload Errors
+
 
 @app.teardown_request
 def remove_session(ex=None):
     session.remove()
 
-# Category List
 
+# Display The Diffrent Categories
 
 @app.route('/')
 def category_show():
@@ -42,11 +45,11 @@ def category_show():
     items = session.query(Category).all()
     return render_template('home.html', items=items)
 
+
 # Login page
-
-
 @app.route('/login')
 def showLogin():
+    """Create Anti forgery state token"""
     state = ''.join(random.choice(string.ascii_uppercase + string.digits)
                     for x in xrange(32))
     login_session['state'] = state
@@ -62,7 +65,7 @@ def fbconnect():
         response.headers['Content-Type'] = 'application/json'
         return response
     access_token = request.data
-    print "access token received %s " % access_token
+    print("access token received %s " % access_token)
 
     app_id = json.loads(open('fb_client_secrets.json', 'r').read())[
         'web']['app_id']
@@ -231,7 +234,7 @@ def gconnect():
     output += ' " style = "width: 150px; height: 150px;border-radius: 75px;'\
               '-webkit-border-radius: 75px;-moz-border-radius: 75px;"> '
     flash("you are now logged in as %s" % login_session['username'])
-    print "done!"
+    print("done!")
     return output
 
 # google disconnect
@@ -240,11 +243,11 @@ def gconnect():
 @app.route('/gdisconnect')
 def gdisconnect():
     access_token = login_session['access_token']
-    print 'In gdisconnect access token is %s', access_token
-    print 'User name is: '
-    print login_session['username']
+    print('In gdisconnect access token is %s', access_token)
+    print('User name is: ')
+    print(login_session['username'])
     if access_token is None:
-        print 'Access Token is None'
+        print('Access Token is None')
         response = make_response(json.dumps(
             'Current user not connected.'), 401)
         response.headers['Content-Type'] = 'application/json'
@@ -253,7 +256,7 @@ def gdisconnect():
           'revoke?token=%s' % login_session['access_token']
     h = httplib2.Http()
     result = h.request(url, 'GET')[0]
-    print 'result is '
+    print('result is ')
     print(result)
     if result['status'] == '200':
         del login_session['access_token']
@@ -271,6 +274,9 @@ def gdisconnect():
         return response
 
 # Categories dashboard
+    """Check if the user is logged in and load the categories from the DB and
+       display them in the table where the user can edit/delete and add
+       categories"""
 
 
 @app.route('/categories')
@@ -281,7 +287,11 @@ def categories_dashboard():
     items = session.query(Category).all()
     return render_template('categories_dashboard.html', items=items)
 
+
 # Add Category
+    """Check if the user is logged in and Display the add Form /
+       Add the new category to the Database by handling the
+       post request"""
 
 
 @app.route('/categories/new', methods=['GET', 'POST'])
@@ -298,7 +308,11 @@ def categories_new():
     else:
         return render_template('Add_category.html')
 
+
 # Edit Category
+"""Check if the user is logged in and is the creator of the category and
+   Display the edit Form / Edit the new category in the Database by
+   handling the post request"""
 
 
 @app.route('/categories/<int:category_id>/edit',
@@ -323,6 +337,9 @@ def categories_edit(category_id):
                                item=editedItem)
 
 # Delete Category
+    """Check if the user is logged in and is the creator of the category and
+       Display the delete Form / delete the selected category from the Database
+       by handling the post request"""
 
 
 @app.route('/categories/<int:category_id>/delete',
@@ -348,7 +365,11 @@ def categories_delete(category_id):
         return render_template('Delete_Category.html', category_id=category_id,
                                item=itemToDelete)
 
+
 # Category products
+"""Display all the products within the selected category and add a brand Filter
+    by loading the distinct brands in the products table that
+    matched with the category id"""
 
 
 @app.route('/<int:category_id>/products')
@@ -363,6 +384,11 @@ def categoryProducts(category_id):
         brands=brands)
 
 # Category Prodcuts Dashboard
+    """Check if the user is logged in and display all the products within the
+      selected category in the dashboard, add a brand Filter by loading the
+      distinct brands in the products table that matched with the category idself.
+      The user is able here to create, modify and delete products within the
+      category"""
 
 
 @app.route('/categories/<int:category_id>/products')
@@ -378,6 +404,9 @@ def categoryProducts_dashboard(category_id):
         category_id=category_id, brands=brands)
 
 # Delete Prodcut from Category
+    """Check if the user is logged in and is the creator of the product and
+       Display the delete Form / delete the selected product from the Database
+       by handling the post request"""
 
 
 @app.route('/categories/<int:category_id>/products/'
@@ -390,7 +419,8 @@ def productItem_delete(category_id, productItem_id):
     UserTest = session.query(User).filter_by(id=itemToDelete.user_id).one()
     if UserTest.email != login_session['email']:
         return "<script>function myFunction() {alert('You are not authorized" \
-               "to delete the products in this category.');history.go(-1);}" \
+               "to delete the products in this category.');" \
+               "history.go(-1);}" \
                "</script><body onload='myFunction()'>"
     if request.method == 'POST':
         session.delete(itemToDelete)
@@ -402,6 +432,10 @@ def productItem_delete(category_id, productItem_id):
                                category_id=category_id, item=itemToDelete)
 
 # Add Product to Category
+    """Check if the user is logged in and is the creator of the category
+       he is trying to add product in and  display the add Form /
+       Add the new Product to the Database by handling the
+       post request"""
 
 
 @app.route('/categories/<int:category_id>/products/add',
@@ -420,8 +454,8 @@ def productItem_add(category_id):
     if request.method == 'POST':
         newItem = Product(name=request.form['name'], description=request.form[
             'description'], price=request.form['price'],
-                          brand=request.form['brand'],
-                          category_id=category_id, user_id=UserTest.id)
+            brand=request.form['brand'],
+            category_id=category_id, user_id=UserTest.id)
         session.add(newItem)
         session.commit()
         return redirect(url_for('categoryProducts_dashboard',
@@ -430,7 +464,11 @@ def productItem_add(category_id):
         return render_template('Add_Product.html',
                                category_id=category_id)
 
+
 # Edit Prodcut to Category
+"""Check if the user is logged in and is the creator of the product and
+   Display the edit Form / Edit the new product in the Database by
+   handling the post request"""
 
 
 @app.route('/categories/<int:category_id>/products/<int:product_id>/edit',
@@ -460,7 +498,6 @@ def productItem_edit(category_id, product_id):
         return redirect(url_for('categoryProducts_dashboard',
                                 category_id=category_id))
     else:
-
         return render_template(
             'Edit_Product.html', category_id=category_id,
             product_id=product_id, item=editedItem)
@@ -490,9 +527,8 @@ def CategoryJSON(category_id):
     res = session.query(Category).filter_by(id=category_id).one()
     return jsonify(Category=res.serialize)
 
+
 # Disconnect based on provider
-
-
 @app.route('/disconnect')
 def disconnect():
     if 'provider' in login_session:
